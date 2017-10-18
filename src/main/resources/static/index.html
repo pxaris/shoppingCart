@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Shop Application</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="http://localhost:8080/js/jquery.min.js"></script>
+    <script src="http://localhost:8080/js/bootstrap.min.js"></script>
+    <style>
+        body { margin: 10px 70px 100px;}
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .itemText {margin-bottom: 20px;}
+        .logo {max-width: 130px;}
+        .title a:hover {text-decoration: none;}
+        .title {display: inline-block;}
+    </style>
+
+</head>
+
+<body>
+<header>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-4">
+                <h1 class="title"><a href="/"><img class="logo" src="http://localhost:8080/images/eshop-logo.png">E-shop</a></h1>
+            </div>
+            <div class="col-sm-8">
+                <div id="myCart"><h2 class="title" style="border-top: 1px solid #e7501e;
+                border-bottom: 1px solid #e7501e;padding: 5px;">My Cart</h2></div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-12">
+            <h2 class="title">All items</h2>
+            <div id="itemsAll"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function deleteReq(entryId) {
+         $.ajax({
+         url: 'http://localhost:8080/cart/'+entryId,
+         type: 'DELETE',
+         contentType:'application/json',  
+         dataType: 'text',                
+         success: function(result) { console.log('ok! '+ result); },
+         error: function(exception){ console.log('error'+ exception); }
+         });
+     }
+
+    function updateCart() {
+        $("input[type=number]").bind('keyup input', function () {
+            var orderId = this.id;
+            var quantity = $(this).val();
+            $.ajax({
+                    url: 'http://localhost:8080/cart/'+orderId,
+                    type: 'PUT',
+                    data: JSON.stringify(quantity),
+                    contentType:'application/json',
+                    dataType: 'text',
+                    success: function(result) { console.log('ok! '+ result); },
+                    error: function(exception){ console.log('error '+ exception); }
+                });
+            setTimeout(location.reload.bind(location), 600);
+        });
+        }
+    </script>
+
+<script>
+        $(document).ready(function () {
+
+            function exposeCart() {
+                var object;
+                $.getJSON('http://localhost:8080/cart', function(json) {
+                    object = json;
+                    if (object.orders.length == 0){
+                        $('#myCart').append('<div class="row"><div class="col-sm-12">' +
+                                '<p>You have not selected any items yet</p></div></div>');
+                    }
+                    else {
+                        $('#myCart').append('<div class="row"><div class="col-sm-8">' +
+                                '<div class="col-sm-3"><h4>Item</h4></div>' +
+                                '<div class="col-sm-3"><h4>Quantity</h4></div>' +
+                                '<div class="col-sm-3"><h4>Price</h4></div>' +
+                                '</div></div>');
+                    }
+
+                    $.each(object.orders, function() {
+
+
+                        $('#myCart').append('<div class="row"><div class="col-sm-8" style="background: #fff6f3; ' +
+                                'border-bottom: 1px solid grey">' +
+                                '<div class="col-sm-3"><h3 style="text-transform: capitalize; font-size: 20px;">'+this.description+'</h3>' +
+                                '</div>' +
+                                '<div class="col-sm-3"><h3 style="padding-left: 15px;">' +
+                                '<input type="number" min="0" step="1" value="'+this.quantity+'" id="'+this.id+'" style="width: 40px;" /></h3></div>' +
+                                '<div class="col-sm-3"><h3>'+this.price+'&euro;</h3></div><div class="col-sm-3" style="margin-top: 20px;">' +
+                                '<a href="#" onclick="deleteReq('+this.id+');setTimeout(location.reload.bind(location), 600);">Remove</a></div>' +
+                                '</div></div>');
+
+
+                    });
+
+                    if (object.orders.length > 0) {
+                        $('#myCart').append('<div class="row"><div class="col-sm-8">' +
+                                '<div class="col-sm-6"><h3>Total Price: ' + Math.round(object.totalPrice * 100) / 100 + '&euro; </h3>' +
+                                '<div id="notify"></div></div><div class="col-sm-6">' +
+                                '<p style="margin-top: 25px;">*including shipping cost</p></div></div></div>');
+                        if (object.discountEligible == true) {
+                            $('#notify').append('<h4 style="background: #337ab7;display: inline-block;color: #fff;' +
+                                    'padding: 5px;">You get 10% discount!</h4>');
+                        }
+                        updateCart();
+                    }
+
+                });
+            }
+
+
+            function exposeItems() {
+                var object;
+                $.getJSON('http://localhost:8080/items', function(json) {
+                    object = json;
+                    $.each(object, function() {
+
+                        $.postJSON = function (url, data, callback) {
+                            return jQuery.ajax({
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                'type': 'POST',
+                                'url': url,
+                                'data': JSON.stringify(data),
+                                'dataType': 'json',
+                                'success': callback
+                            });
+                        }
+
+                        $('#itemsAll').append('<div class="col-sm-4" style="border: 1px grey solid;">' +
+                                '<img src="http://localhost:8080/images/'+this.image+'" style="max-width:90%;">' +
+                                '<div class="itemText">' +
+                                '<h3 style="width: 100%; text-transform: capitalize;">'+this.description+'</h3>' +
+                                '<p>Price: '+this.price+'&euro;</p>' +
+                                '<a href="#" class="item" id="item'+ this.id +'" ' +
+                                'onclick="$.postJSON(\'http://localhost:8080/cart\','+ this.id +', console.log(\'Ok\'));' +
+                                'setTimeout(location.reload.bind(location), 600);">' +
+                                '+Add to Cart</a>' +
+                                '</div>' +
+                                '</div>');
+
+
+                    });
+                });
+            }
+
+            exposeCart();
+
+            exposeItems();
+
+
+        });
+    </script>
+
+</body>
+</html>
